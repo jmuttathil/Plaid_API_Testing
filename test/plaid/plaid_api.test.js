@@ -1,6 +1,5 @@
 const { expect } = require('chai');
 const Api = require('../../src/api');
-const moment = require('moment');
 let api;
 
 const transaction = {
@@ -121,7 +120,7 @@ const transaction = {
   request_id: '45QSn',
 };
 
-describe('User verifies github scenarios', async () => {
+describe('User verifies Plaid API', async () => {
   before(async () => {
     //Actions to perform before each tests
     api = new Api();
@@ -130,106 +129,66 @@ describe('User verifies github scenarios', async () => {
     //Actions to perform after each tests
   });
 
-  it('can verify search repositories', async () => {
-    const resp = await api.searchRepositories('postman', 'asc', '1');
-    // console.log(
-    //     '\x1b[36m### Resp: %s\x1b[0m',
-    //     JSON.stringify(resp, null, 2)
-    //   );
-
-    expect(resp.total_count).to.be.greaterThan(32550);
-    expect(resp.incomplete_results).to.be.false;
-    expect(resp.items).to.be.an('array');
-    expect(resp.items[0].node_id).to.equal('MDEwOlJlcG9zaXRvcnkyNjU3ODI5NzM=');
-  });
-
-  it('can verify topics values', async () => {
-    const resp = await api.searchRepositories('postman', 'asc', '1');
-    //TODO Verify topics array to have 2 values and values should be [chinese, postman]
-
-    const topics = resp.items[0].topics;
-    expect(topics).to.be.an('array');
-    expect(topics).to.have.lengthOf(2);
-
-    const expectedTopics = ['chinese', 'postman'];
-    expect(topics).to.deep.equal(expectedTopics);
-  });
-
-  it('can verify user login details', async () => {
-    const resp = await api.getUserInfo('mmuntakim15');
-
-    expect(resp.login).to.equal('mmuntakim15');
-    //TODO verify id value
-  });
-
-  it('can verify user login details', async () => {
-    const resp = await api.getUserInfo('mmuntakim15');
-
-    expect(resp.login).to.equal('mmuntakim15');
-    //TODO verify id value
-  });
-
-  it('Verify created date timestamp', async () => {
-    const resp = await api.searchRepositories('postman', 'asc', '1');
-
-    const item = resp.items[0];
-
-    let createdAt = moment(item.created_at);
-    let updatedAt = moment(item.updated_at);
-
-    let isAfter = updatedAt.isAfter(createdAt);
-    expect(isAfter).to.be.true;
-  });
-
-  it('Verify user is able to create new repo', async () => {
-    const resp = await api.createNewRepo('Hello-World-42');
-    expect(resp.owner.login).to.equal(process.env.USERNAME);
-    //TODO verify id value
-    expect(resp.owner.id).to.equal(114625281);
-  });
-
-  it('Verify user is able to update a repo', async () => {
-    let owner = 'jmuttathil';
-    let oldRepoName = 'Hello-World-43';
-    let newRepoName = 'Hello-World-42';
-
-    const resp = await api.updateRepo(owner, oldRepoName, newRepoName);
-    console.log(resp);
-    expect(resp.name).to.equal(newRepoName);
-  });
-
-  it.only('Verify current balance is not greater than available balance', async () => {
+  it('Verify current balance is not greater than available balance', async () => {
     let resp = transaction;
-    //TODO Write your test here
-resp.forEach(
 
-    let currentBal = resp.accounts.balances.current;
-    let availableBal = resp.accounts.balances.available;
-    if (currentBal <= availableBal) {
-      let verifyBalance = true;
-    } else {
-      let verifyBalance = false;
-    }
-    expect(verifyBalance).to.be.true;
+    resp.accounts.forEach(function (accountData, index) {
+      let verifyBalance;
+      let currentBal = accountData.balances.current;
+      console.log(`account[${index}]currentBal = ${currentBal}`);
+      let availableBal = accountData.balances.available;
+      console.log(`account[${index}]availableBal = ${availableBal}`);
+
+      if (currentBal <= availableBal) {
+        verifyBalance = true;
+      } else {
+        verifyBalance = false;
+      }
+      expect(verifyBalance).to.be.true;
+    });
   });
-)
+
   it('Verify valid iso_currency_code code for each transaction', async () => {
     let validCurrencyCode = ['USD', 'EU', 'GBP'];
+    let isValidCurrencyCode = false;
     let resp = transaction;
 
-    //TODO Write your test here
+    resp.transactions.forEach(function (transactionData, index) {
+      let transCurrency = transactionData.iso_currency_code;
+      console.log(`transCurrency[${index}] = ${transCurrency}`);
+      expect(validCurrencyCode).to.include(transCurrency);
+    });
+  });
+
+  it('Verify each payment_meta property set to null inside of each transaction', async () => {
+    let resp = transaction;
+
+    resp.transactions.forEach(function (transactionData, index) {
+      console.log(`transaction[${index}]paymentMetaData:`);
+      let paymentMetaData = transactionData.payment_meta;
+      for (const key in paymentMetaData) {
+        console.log(`     ${key} is ${paymentMetaData[key]}`);
+        expect(paymentMetaData[key]).to.be.null;
+      }
+    });
   });
 });
 
-/*
+it('Verify valid available product types', async () => {
+  let expectedProducts = ['balance', 'identity', 'investments'];
+  let resp = transaction;
 
-Homework #1
-1. Create new test file and import all necessary files and library you need to build and execute your tests
-2. Write a new test which validates search repository created_at date is not greater than updated_at date
-https://momentjs.com/docs/ 
+  let availableProducts = resp.item.available_products;
+  console.log(`availableProducts = ${availableProducts}`);
+  console.log(`expectedProducts = ${expectedProducts}`);
 
-Homework#2
-1. Implement basic authentication on api.js file
-2. Implement POST create repository endpoint which takes body parameters
+  expect(availableProducts).to.deep.equal(expectedProducts);
+});
 
-*/
+it('Verify webhook link is a valid link type', async () => {
+  let resp = transaction;
+
+  let webhookProtocol = resp.item.webhook.substring(0, 6);
+  console.log(`webhookProtocol = ${webhookProtocol}`);
+  expect(webhookProtocol).to.equal('https:');
+});

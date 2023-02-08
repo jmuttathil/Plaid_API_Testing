@@ -19,49 +19,6 @@ class Api {
       // resolveWithFullResponse: true
     });
   }
-
-  searchRepositories(q, order, per_page) {
-    const path = `/search/repositories`;
-
-    return this.request.get({
-      url: `${this.host}${path}`,
-      qs: {
-        q,
-        order,
-        per_page,
-      },
-    });
-  }
-
-  getUserInfo(owner) {
-    const path = `/users/${owner}`;
-
-    return this.request.get({
-      url: `${this.host}${path}`,
-    });
-  }
-
-  createNewRepo(name) {
-    const path = `/user/repos`;
-
-    return this.request.post({
-      url: `${this.host}${path}`,
-      body: {
-        name,
-      },
-    });
-  }
-
-  updateRepo(owner, oldReposName, newReposName) {
-    const path = `/repos/${owner}/${oldReposName}`;
-
-    return this.request.patch({
-      url: `${this.host}${path}`,
-      body: {
-        name: newReposName,
-      },
-    });
-  }
 }
 
 module.exports = Api;
